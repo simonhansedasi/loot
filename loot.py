@@ -52,6 +52,12 @@ def roll_coins(coins):
 
         roll = roll_nd(dice)
         multiplier = int(multiplier)
+        if multiplier == 10:
+            multiplier = multiplier + random.randint(-5, 5)
+        if multiplier == 100:
+            multiplier = multiplier + random.randint(-25, 25)
+        if multiplier == 1000:
+            multiplier = multiplier + random.randint(-250, 250)
         coinage = roll * multiplier
         loot.append((coin, coinage))
     return loot
@@ -197,7 +203,12 @@ def extract_magic_items(magic_items):
         items.append(item[4])
     return items
 
-
+def extract_spell_level(item):
+    return f'Level {str(item[14])}'
+    
+    
+    
+    
 def roll_hoard(CR):
 
     loot_type = 'hoard'
@@ -209,8 +220,7 @@ def roll_hoard(CR):
     loot_results = get_loot(loot_type, roll, tier)
 
     coins = roll_coins(json.loads(loot_results[0][2]))
-    for item in coins:
-        print(f'{int(item[1]):,} {item[0]}')
+    
     art_amnt, art_type = None, None
     gem_amnt, gem_type = None, None
     
@@ -224,10 +234,9 @@ def roll_hoard(CR):
         for item in art_results:
             art.append(item[2])  
         selected_art = sample_art(art, art_amnt)
-        if selected_art:
-            for item in selected_art:
-                print(f'{item}, {int(art_type):,} gp')
-            
+        
+        
+        
     selected_gems = None
     if loot_results[0][7] and loot_results[0][8]:
         gem_amnt, gem_type = get_art_objects(
@@ -238,9 +247,6 @@ def roll_hoard(CR):
         for item in gem_results:
             gems.append(item[2])
         selected_gems = sample_gems(gems, gem_amnt)
-        if selected_gems:
-            for item in selected_gems:
-                print(f'{item}, {int(gem_type):,} gp')
         
     magic_items = None
     if loot_results[0][9] and loot_results[0][10]:
@@ -249,8 +255,15 @@ def roll_hoard(CR):
         query = build_magic_query(magic_table, times)
         rolled_items = roll_magic_items(query)
         magic_items = extract_magic_items(rolled_items)
-        for item in magic_items:
-            print(item)
+        
+        for i, item in enumerate(magic_items):
+            if 'Spell Scroll' in item:
+                spell_level = extract_spell_level(item)
+                spells = query_spells(spell_level)
+                n = len(spells) -1
+                spell = spells[random.randint(0, n)]
+                magic_items[i] = f'Scroll of {spell}'
+                
     return (coins, selected_art, selected_gems, magic_items)
             
             
@@ -263,8 +276,19 @@ def roll_individual(CR):
     for item in loot_results:
         coins[item[4]] = item[5]
     coins = roll_coins(coins)
-    for item in coins:
-        print(f'{int(item[1]):,} {item[0]}')
     return coins
             
             
+def query_spells(spell_level):
+    conn = sqlite3.connect('spells.db')
+    cursor = conn.cursor()
+
+    # Query to fetch all contents from the 'individual' table
+    query = ("SELECT * FROM spells WHERE spell_level = ?;")
+    cursor.execute(query, (spell_level,))
+    results = cursor.fetchall()
+    conn.close()
+    spells = []
+    for row in results:
+        spells.append(row[2])
+    return spells

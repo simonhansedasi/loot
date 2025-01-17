@@ -1,9 +1,9 @@
 import sqlite3
 import json
 
-def load_data():
+def load_data(string):
     """Load the loot data from the JSON file."""
-    with open('loot.json', 'r') as file:
+    with open(string, 'r') as file:
         return json.load(file)
 
 def get_tier_from_name(name):
@@ -128,7 +128,7 @@ def process_art_objects_data(data):
                 obje_dart.append((art_type, entry))
     return obje_dart
 
-def create_tables(cursor):
+def create_loot_tables(cursor):
     """Create the necessary tables in the database."""
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS loot_tables (
@@ -192,6 +192,21 @@ def create_tables(cursor):
         coin_value TEXT
     )
     ''')
+    
+    
+def create_spell_tables(cursor):
+    """Create the necessary tables in the database."""
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS spells (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL,
+        name TEXT NOT NULL,
+        spell_level TEXT NOT NULL
+    )
+    ''')    
+    
+    
+
 
 def insert_data(cursor, table, columns, data):
     """
@@ -217,14 +232,48 @@ def insert_data(cursor, table, columns, data):
     # Execute the insert operation with the provided data
     cursor.executemany(query, data)
 
-def main():
-    data = load_data()
+    
+    
+    
+
+    
+    
+def build_spells_db():
+    
+    sources = ['phb', 'xge', 'tce']
+    spells = []
+    for source in sources:
+        # print(source)
+        data = load_data('spells-' + source + '.json')
+
+        for key, item in data.items():
+            for stuff in data[key]:
+                spell_name = stuff['name']
+                spell_level = stuff['level']
+                spell = (source, spell_name, 'Level ' + str(spell_level))
+                # print(f'{spell_name}, Level {spell_level}')
+                spells.append(spell)
+    
+    
+    with sqlite3.connect('spells.db') as conn:
+        cursor = conn.cursor()
+
+        create_spell_tables(cursor)
+    
+        insert_data(
+            cursor, 'spells', 
+            ['source', 'name', 'spell_level'], spells
+        )
+        conn.commit()
+    
+def build_loot_db():
+    data = load_data('loot.json')
 
     # Connect to SQLite database (or create it if it doesn't exist)
     with sqlite3.connect('loot.db') as conn:
         cursor = conn.cursor()
 
-        create_tables(cursor)
+        create_loot_tables(cursor)
 
         # Process and insert data into individual table
         individual_data = process_individual_data(data)
@@ -284,6 +333,18 @@ def main():
 
         conn.commit()
 
+    
+    
+    
+    
+    
+    
+    
+    
+def main():
+    build_loot_db()
+    build_spells_db()
+    
 
 if __name__ == "__main__":
     main()
