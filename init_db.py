@@ -244,7 +244,7 @@ def build_spells_db():
     spells = []
     for source in sources:
         # print(source)
-        data = load_data('spells-' + source + '.json')
+        data = load_data('data/spells-' + source + '.json')
 
         for key, item in data.items():
             for stuff in data[key]:
@@ -267,7 +267,7 @@ def build_spells_db():
         conn.commit()
     
 def build_loot_db():
-    data = load_data('loot.json')
+    data = load_data('data/loot.json')
 
     # Connect to SQLite database (or create it if it doesn't exist)
     with sqlite3.connect('loot.db') as conn:
